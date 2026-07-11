@@ -82,23 +82,6 @@ export default function Home() {
   const [syncedLyrics, setSyncedLyrics] = useState(false);
   const abortRef = useRef(false);
   const downloadTriggeredRef = useRef(false);
-  // Enter key triggers download when track/playlist is ready
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Enter") return;
-      if (state !== "ready") return;
-      if (downloadTriggeredRef.current) return;
-      // Don't trigger if focused on the input
-      const active = document.activeElement;
-      if (active && active.tagName === "INPUT") return;
-      downloadTriggeredRef.current = true;
-      if (track) handleDownload();
-      else if (playlist) handleDownloadAll();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  });
-
   const handleSubmit = async (url: string) => {
     setState("thinking");
     setError("");
@@ -548,6 +531,23 @@ export default function Home() {
       setState("error");
     }
   };
+
+  // Enter key triggers download when track/playlist is ready
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      if (state !== "ready") return;
+      if (downloadTriggeredRef.current) return;
+      // Don't trigger if focused on the input
+      const active = document.activeElement;
+      if (active && active.tagName === "INPUT") return;
+      downloadTriggeredRef.current = true;
+      if (track) handleDownload();
+      else if (playlist) handleDownloadAll();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  });
 
   const handleReset = () => {
     setState("idle");

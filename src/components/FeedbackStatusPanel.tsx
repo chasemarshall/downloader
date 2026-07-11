@@ -67,7 +67,7 @@ export default function FeedbackStatusPanel() {
   }, []);
 
   useEffect(() => {
-    void refreshStatuses();
+    queueMicrotask(() => void refreshStatuses());
 
     const syncAndRefresh = () => {
       void refreshStatuses();
@@ -85,7 +85,7 @@ export default function FeedbackStatusPanel() {
   useEffect(() => {
     if (!open || !reports.length) return;
     markFeedbackStatusesSeen(reports);
-    setTracked(readTrackedFeedback());
+    queueMicrotask(() => setTracked(readTrackedFeedback()));
   }, [open, reports]);
 
   const unseenCount = useMemo(() => {
