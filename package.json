@@ -21,22 +21,30 @@
     "@ffmpeg/util": "^0.12.2",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@linear/sdk": "^80.1.0",
-    "fflate": "^0.8.2",
-    "lucide-react": "^1.8.0",
-    "next": "^16.2.3",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "fflate": "^0.8.3",
+    "lucide-react": "^1.21.0",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
-    "@tailwindcss/postcss": "^4.2.2",
+    "@playwright/test": "^1.61.0",
+    "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "^25.6.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.3",
-    "tailwindcss": "^4.2.2",
+    "eslint-config-next": "^16.2.9",
+    "tailwindcss": "^4.3.1",
     "typescript": "^5",
-    "vitest": "^4.1.4"
+    "vite": "^8.1.4",
+    "vitest": "^4.1.9"
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml": "4.2.0",
+      "postcss": "8.5.17",
+      "vite": "8.1.4"
+    }
   }
 }
