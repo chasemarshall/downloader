@@ -1,3 +1,5 @@
+import { isCompilationAlbum } from "./audio-metadata";
+
 interface SpotifyToken {
   access_token: string;
   expires_at: number;
@@ -126,6 +128,7 @@ export interface TrackInfo {
   label: string | null;
   copyright: string | null;
   totalTracks: number | null;
+  compilation?: boolean;
   videoCover?: string;
 }
 
@@ -178,12 +181,13 @@ export async function getTrackInfo(url: string): Promise<TrackInfo> {
     // Skip on failure
   }
 
-  const albumArtist = data.album.artists?.map((a: { name: string }) => a.name).join(", ") || null;
+  const albumArtist = data.album.artists?.map((a: { name: string }) => a.name).join("; ") || null;
 
   return {
     name: data.name,
-    artist: data.artists.map((a: { name: string }) => a.name).join(", "),
+    artist: data.artists.map((a: { name: string }) => a.name).join("; "),
     albumArtist,
+    compilation: isCompilationAlbum(albumArtist, data.album.album_type),
     album: data.album.name,
     albumArt: data.album.images[0]?.url || "",
     duration: formatDuration(data.duration_ms),
@@ -261,10 +265,14 @@ export async function getPlaylistInfo(url: string): Promise<PlaylistInfo> {
   }
 
   const tracks: TrackInfo[] = validItems
-    .map((item: { track: { name: string; artists: { id: string; name: string }[]; album: { name: string; artists?: { name: string }[]; images: { url: string }[]; release_date?: string; total_tracks?: number }; duration_ms: number; external_ids?: { isrc?: string }; external_urls: { spotify: string }; explicit?: boolean; track_number?: number; disc_number?: number } }) => ({
+    .map((item: { track: { name: string; artists: { id: string; name: string }[]; album: { name: string; album_type?: string; artists?: { name: string }[]; images: { url: string }[]; release_date?: string; total_tracks?: number }; duration_ms: number; external_ids?: { isrc?: string }; external_urls: { spotify: string }; explicit?: boolean; track_number?: number; disc_number?: number } }) => ({
       name: item.track.name,
-      artist: item.track.artists.map((a) => a.name).join(", "),
-      albumArtist: item.track.album.artists?.map((a) => a.name).join(", ") || null,
+      artist: item.track.artists.map((a) => a.name).join("; "),
+      albumArtist: item.track.album.artists?.map((a) => a.name).join("; ") || null,
+      compilation: isCompilationAlbum(
+        item.track.album.artists?.map((a) => a.name).join("; ") || null,
+        item.track.album.album_type,
+      ),
       album: item.track.album.name,
       albumArt: item.track.album.images[0]?.url || "",
       duration: formatDuration(item.track.duration_ms),
@@ -352,13 +360,15 @@ export async function getAlbumInfo(url: string): Promise<PlaylistInfo> {
   const albumLabel: string | null = data.label || null;
   const albumCopyright: string | null = data.copyrights?.[0]?.text || null;
   const albumTotalTracks: number | null = data.total_tracks ?? null;
-  const albumArtist: string | null = data.artists?.map((a: { name: string }) => a.name).join(", ") || null;
+  const albumArtist: string | null = data.artists?.map((a: { name: string }) => a.name).join("; ") || null;
+  const compilation = isCompilationAlbum(albumArtist, data.album_type);
 
   const tracks: TrackInfo[] = validItems
     .map((item: { name: string; artists: { id: string; name: string }[]; duration_ms: number; external_ids?: { isrc?: string }; external_urls: { spotify: string }; explicit?: boolean; track_number?: number; disc_number?: number }) => ({
       name: item.name,
-      artist: item.artists.map((a) => a.name).join(", "),
+      artist: item.artists.map((a) => a.name).join("; "),
       albumArtist,
+      compilation,
       album: albumName,
       albumArt,
       duration: formatDuration(item.duration_ms),
@@ -398,7 +408,7 @@ export async function searchTracks(query: string, limit = 8): Promise<TrackInfo[
     (track: {
       name: string;
       artists: { name: string }[];
-      album: { name: string; artists?: { name: string }[]; images: { url: string }[]; release_date?: string; total_tracks?: number };
+      album: { name: string; album_type?: string; artists?: { name: string }[]; images: { url: string }[]; release_date?: string; total_tracks?: number };
       duration_ms: number;
       external_ids?: { isrc?: string };
       external_urls: { spotify: string };
@@ -407,8 +417,12 @@ export async function searchTracks(query: string, limit = 8): Promise<TrackInfo[
       disc_number?: number;
     }) => ({
       name: track.name,
-      artist: track.artists.map((a) => a.name).join(", "),
-      albumArtist: track.album.artists?.map((a) => a.name).join(", ") || null,
+      artist: track.artists.map((a) => a.name).join("; "),
+      albumArtist: track.album.artists?.map((a) => a.name).join("; ") || null,
+      compilation: isCompilationAlbum(
+        track.album.artists?.map((a) => a.name).join("; ") || null,
+        track.album.album_type,
+      ),
       album: track.album.name,
       albumArt: track.album.images[0]?.url || "",
       duration: formatDuration(track.duration_ms),
@@ -451,10 +465,14 @@ export async function getArtistTopTracks(url: string): Promise<PlaylistInfo> {
   const artistGenre = artistData.genres?.[0] || null;
 
   const tracks: TrackInfo[] = topTracksData.tracks.map(
-    (track: { name: string; artists: { name: string }[]; album: { name: string; artists?: { name: string }[]; images: { url: string }[]; release_date?: string; total_tracks?: number }; duration_ms: number; external_ids?: { isrc?: string }; external_urls: { spotify: string }; explicit?: boolean; track_number?: number; disc_number?: number }) => ({
+    (track: { name: string; artists: { name: string }[]; album: { name: string; album_type?: string; artists?: { name: string }[]; images: { url: string }[]; release_date?: string; total_tracks?: number }; duration_ms: number; external_ids?: { isrc?: string }; external_urls: { spotify: string }; explicit?: boolean; track_number?: number; disc_number?: number }) => ({
       name: track.name,
-      artist: track.artists.map((a) => a.name).join(", "),
-      albumArtist: track.album.artists?.map((a) => a.name).join(", ") || null,
+      artist: track.artists.map((a) => a.name).join("; "),
+      albumArtist: track.album.artists?.map((a) => a.name).join("; ") || null,
+      compilation: isCompilationAlbum(
+        track.album.artists?.map((a) => a.name).join("; ") || null,
+        track.album.album_type,
+      ),
       album: track.album.name,
       albumArt: track.album.images[0]?.url || "",
       duration: formatDuration(track.duration_ms),

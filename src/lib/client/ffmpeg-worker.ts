@@ -107,6 +107,9 @@ export function buildFfmpegArgs(
   if (metadata.albumArtist) {
     args.push("-metadata", `album_artist=${metadata.albumArtist}`);
   }
+  if (metadata.compilation) {
+    args.push("-metadata", "compilation=1");
+  }
   if (metadata.genre) {
     args.push("-metadata", `genre=${metadata.genre}`);
   }

@@ -18,6 +18,7 @@ export interface EnvelopeMetadata {
   artist: string;
   album: string;
   albumArtist: string | null;
+  compilation: boolean;
   genre: string | null;
   releaseDate: string | null;
   trackNumber: string | null;
@@ -47,6 +48,7 @@ export function buildEnvelopeMetadata(
     artist: track.artist,
     album: track.album,
     albumArtist: track.albumArtist,
+    compilation: track.compilation === true,
     genre: track.genre,
     releaseDate: track.releaseDate,
     trackNumber: track.trackNumber != null
