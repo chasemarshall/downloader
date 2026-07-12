@@ -8,6 +8,7 @@ export interface EnvelopeMetadata {
   artist: string;
   album: string;
   albumArtist: string | null;
+  compilation: boolean;
   genre: string | null;
   releaseDate: string | null;
   trackNumber: string | null;

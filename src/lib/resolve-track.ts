@@ -12,6 +12,7 @@ import { getYouTubeTrackInfo } from "./youtube";
 import { resolveToSpotify } from "./songlink";
 import { fetchDeezerTrackMetadata, lookupDeezerByIsrc } from "./deezer";
 import { searchItunesTrack, extractAppleMusicTrackId, lookupByItunesId } from "./itunes";
+import { isCompilationAlbum } from "./audio-metadata";
 
 export interface SpotifyFromUrlImage {
   url: string;
@@ -37,6 +38,7 @@ export interface SpotifyFromUrlTrack {
   disc_number: number | null;
   total_tracks?: number | null;
   copyright?: string | null;
+  compilation?: boolean;
 }
 
 export interface SpotifyFromUrlCollectionInfo {
@@ -476,6 +478,7 @@ function mapSpotifyPathfinderTrack(
     ? track.albumOfTrack as Record<string, unknown>
     : null;
   const albumArtists = mapSpotifyPathfinderArtists(albumOfTrack?.artists);
+  const albumArtist = albumArtists.length ? albumArtists.join("; ") : null;
   const images = mapSpotifyPathfinderImages(albumOfTrack?.coverArt && typeof albumOfTrack.coverArt === "object"
     ? (albumOfTrack.coverArt as { sources?: unknown }).sources
     : undefined);
@@ -501,6 +504,7 @@ function mapSpotifyPathfinderTrack(
     name: title,
     artists,
     album_artists: albumArtists.length ? albumArtists : undefined,
+    compilation: isCompilationAlbum(albumArtist),
     album: typeof albumOfTrack?.name === "string" ? normalizeSpotifyText(albumOfTrack.name) : title,
     image: pickLargestSpotifyImage(images),
     thumb_image: pickSmallestSpotifyImage(images),
@@ -790,8 +794,9 @@ function mapSpotifyEmbedTrack(
 
   return {
     name: title,
-    artist: artists.join(", "),
-    albumArtist: collectionType === "album" || collectionType === "artist" ? artists.join(", ") : null,
+    artist: artists.join("; "),
+    albumArtist: collectionType === "album" || collectionType === "artist" ? artists.join("; ") : null,
+    compilation: collectionType === "album" && isCompilationAlbum(artists.join("; ")),
     album: collectionType === "album" ? collectionName : "",
     albumArt: collectionType === "album" ? collectionImage : "",
     duration: formatDuration(typeof track.duration === "number" ? track.duration : 0),
@@ -845,7 +850,7 @@ async function scrapeSpotifyTrack(url: string): Promise<TrackInfo | null> {
       ? entity.artists
           .map((a: { name?: unknown }) => (typeof a?.name === "string" ? a.name.trim() : ""))
           .filter(Boolean)
-          .join(", ")
+          .join("; ")
       : "";
 
     if (!name || !artist) return null;
@@ -860,6 +865,7 @@ async function scrapeSpotifyTrack(url: string): Promise<TrackInfo | null> {
       name,
       artist,
       albumArtist: artist,
+      compilation: isCompilationAlbum(artist),
       album: albumName || name,
       albumArt,
       duration: formatDuration(durationMs),
@@ -1006,7 +1012,7 @@ async function resolveOembed(url: string): Promise<{ artist: string | null; titl
                   : [];
 
                 if (names.length > 0) {
-                  result.artist = names.join(", ");
+                  result.artist = names.join("; ");
                   console.log("[oembed] scraped artist from NEXT_DATA:", result.artist);
                 }
 
@@ -1032,7 +1038,7 @@ async function resolveOembed(url: string): Promise<{ artist: string | null; titl
                 .map((a: { name?: string }) => a.name)
                 .filter(Boolean);
               if (names.length > 0) {
-                result.artist = names.join(", ");
+                result.artist = names.join("; ");
                 console.log("[oembed] scraped artist from embed JSON:", result.artist);
               }
             } catch { /* JSON parse failed */ }
@@ -1351,6 +1357,7 @@ async function scrapeSpotifyEmbed(type: "playlist" | "album" | "artist", id: str
           name: title,
           artist: normalizeSpotifyText(artist),
           albumArtist: type === "album" ? normalizeSpotifyText(artist) : null,
+          compilation: type === "album" && isCompilationAlbum(artist),
           album: type === "album" ? name : "",
           albumArt: type === "album" ? image : "",
           duration: formatDuration(durationMs),
@@ -1575,12 +1582,13 @@ export async function resolveTrack(url: string): Promise<{ track: TrackInfo; pla
     const unfurled = await getSpotifyFromUrl(url, { enrichIsrc: true });
     if (unfurled?.tracks[0]) {
       const t = unfurled.tracks[0];
-      const artist = t.artists.join(", ");
-      const albumArtist = t.album_artists?.length ? t.album_artists.join(", ") : null;
+      const artist = t.artists.join("; ");
+      const albumArtist = t.album_artists?.length ? t.album_artists.join("; ") : null;
       track = {
         name: t.name,
         artist,
         albumArtist,
+        compilation: t.compilation ?? isCompilationAlbum(albumArtist),
         album: t.album,
         albumArt: t.image?.url || t.thumb_image?.url || "",
         duration: `${Math.floor(t.duration_ms / 60000)}:${Math.floor((t.duration_ms % 60000) / 1000).toString().padStart(2, "0")}`,
@@ -1604,5 +1612,6 @@ export async function resolveTrack(url: string): Promise<{ track: TrackInfo; pla
   }
 
   if (!track) return null;
+  track.compilation = track.compilation ?? isCompilationAlbum(track.albumArtist);
   return { track, platform, youtubeVideoId };
 }

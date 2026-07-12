@@ -173,6 +173,9 @@ export async function POST(request: NextRequest) {
     if (track.albumArtist) {
       ffmpegArgs.push("-metadata", `album_artist=${track.albumArtist}`);
     }
+    if (track.compilation) {
+      ffmpegArgs.push("-metadata", "compilation=1");
+    }
     if (track.genre) {
       ffmpegArgs.push("-metadata", `genre=${track.genre}`);
     }

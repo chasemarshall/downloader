@@ -7,6 +7,7 @@ import { rateLimit } from "@/lib/ratelimit";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
+import { isCompilationAlbum } from "@/lib/audio-metadata";
 
 const METADATA_CACHE_TTL = 15 * 60 * 1000;
 const METADATA_CACHE_MAX = 200;
@@ -78,14 +79,15 @@ function mapUnfurlTrackToMetadataTrack(
   track: SpotifyFromUrlTrack,
   collection: SpotifyFromUrlResponse["playlist_info"],
 ): TrackInfo {
-  const artist = track.artists.join(", ");
+  const artist = track.artists.join("; ");
   const albumArtist = track.album_artists?.length
-    ? track.album_artists.join(", ")
+    ? track.album_artists.join("; ")
     : (collection.type === "album" || collection.type === "artist" ? artist : null);
   return {
     name: track.name,
     artist,
     albumArtist,
+    compilation: track.compilation ?? isCompilationAlbum(albumArtist),
     album: track.album,
     albumArt: track.image?.url || track.thumb_image?.url || collection.images[0]?.url || "",
     duration: formatDuration(track.duration_ms),
@@ -157,7 +159,10 @@ async function enrichMetadataTrack(track: TrackInfo): Promise<TrackInfo> {
     };
   }
 
-  return enriched;
+  return {
+    ...enriched,
+    compilation: enriched.compilation ?? isCompilationAlbum(enriched.albumArtist),
+  };
 }
 
 async function enrichMetadataTracks(tracks: TrackInfo[]): Promise<TrackInfo[]> {
